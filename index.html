@@ -1,0 +1,267 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Happy Monthsary, My Everything 💖</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --rose: #ff6f91;
+    --cream: #fff7f9;
+    --soft: rgba(255, 182, 193, 0.25);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Playfair Display', serif;
+    background: linear-gradient(135deg, #ffe6eb, #fff);
+    color: #5a2a3c;
+}
+
+header {
+    text-align: center;
+    padding: 3rem 1rem 2rem;
+}
+
+header h1 {
+    font-family: 'Great Vibes', cursive;
+    font-size: 3.5rem;
+    color: var(--rose);
+}
+
+main {
+    max-width: 900px;
+    margin: auto;
+    padding: 1.5rem;
+    display: grid;
+    gap: 2rem;
+}
+
+.card {
+    background: var(--cream);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px var(--soft);
+}
+
+.letter-title {
+    font-family: 'Great Vibes', cursive;
+    font-size: 2.2rem;
+    color: var(--rose);
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+textarea {
+    width: 100%;
+    min-height: 220px;
+    border-radius: 16px;
+    border: 1px solid #f3c1cc;
+    padding: 1rem;
+    font-family: inherit;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--rose);
+}
+
+.memories {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.memory-slot {
+    background: #fff;
+    border-radius: 20px;
+    padding: 1rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    text-align: center;
+}
+
+.photo-slot {
+    width: 100%;
+    height: 200px;
+    border-radius: 16px;
+    background: #fbe3ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a96b7c;
+    font-size: 0.9rem;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.photo-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.memory-slot textarea {
+    margin-top: 0.8rem;
+    min-height: 80px;
+    font-size: 0.9rem;
+}
+
+footer {
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Great Vibes', cursive;
+    font-size: 1.5rem;
+    color: var(--rose);
+}
+
+.heart {
+    position: fixed;
+    bottom: -20px;
+    font-size: 20px;
+    animation: floatUp 8s linear infinite;
+    opacity: 0.6;
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(0); opacity: 0; }
+    10% { opacity: 0.6; }
+    100% { transform: translateY(-110vh); opacity: 0; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Happy Monthsary, My Love</h1>
+    <p>A scrapbook of us 💕</p>
+</header>
+
+<main>
+
+<section class="card">
+    <div class="letter-title">My Love Letter</div>
+    <textarea id="letter" placeholder="Write your monthsary letter here..."></textarea>
+</section>
+
+<section class="card">
+    <div class="letter-title">Our Memories</div>
+    <div class="memories" id="memories"></div>
+</section>
+
+</main>
+
+<footer>
+    Forever & Always 💖
+</footer>
+
+<input type="file" id="fileInput" accept="image/*,.heic,.heif" hidden>
+
+<script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
+
+<script>
+/* ================= LETTER ================= */
+const letter = document.getElementById('letter');
+letter.value = localStorage.getItem('letter') || '';
+letter.addEventListener('input', () => localStorage.setItem('letter', letter.value));
+
+/* ================= INDEXED DB ================= */
+let db;
+const request = indexedDB.open('monthsaryDB', 1);
+
+request.onupgradeneeded = e => {
+    db = e.target.result;
+    db.createObjectStore('photos', { keyPath: 'id' });
+};
+
+request.onsuccess = e => {
+    db = e.target.result;
+    initMemories();
+};
+
+function saveImage(id, data) {
+    const tx = db.transaction('photos', 'readwrite');
+    tx.objectStore('photos').put({ id, data });
+}
+
+function loadImages() {
+    const tx = db.transaction('photos', 'readonly');
+    tx.objectStore('photos').getAll().onsuccess = e => {
+        e.target.result.forEach(item => {
+            const slot = document.querySelector(`.photo-slot[data-id='${item.id}']`);
+            if (slot) slot.innerHTML = `<img src="${item.data}">`;
+        });
+    };
+}
+
+/* ================= MEMORIES ================= */
+const memoriesContainer = document.getElementById('memories');
+const fileInput = document.getElementById('fileInput');
+const savedTexts = JSON.parse(localStorage.getItem('memoriesText')) || [];
+const SLOT_COUNT = 6;
+
+function initMemories() {
+    for (let i = 0; i < SLOT_COUNT; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'memory-slot';
+        slot.innerHTML = `
+            <div class="photo-slot" data-id="${i}">Click to add photo</div>
+            <textarea placeholder="Write the memory..."></textarea>
+        `;
+
+        const photoSlot = slot.querySelector('.photo-slot');
+        const textArea = slot.querySelector('textarea');
+        textArea.value = savedTexts[i] || '';
+
+        photoSlot.addEventListener('click', () => selectImage(i, photoSlot));
+        textArea.addEventListener('input', () => {
+            savedTexts[i] = textArea.value;
+            localStorage.setItem('memoriesText', JSON.stringify(savedTexts));
+        });
+
+        memoriesContainer.appendChild(slot);
+    }
+
+    loadImages();
+}
+
+async function selectImage(index, photoSlot) {
+    fileInput.onchange = async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        let blob = file;
+        if (file.name.match(/\.(heic|heif)$/i)) {
+            blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+        }
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            photoSlot.innerHTML = `<img src="${e.target.result}">`;
+            saveImage(index, e.target.result);
+        };
+        reader.readAsDataURL(blob);
+    };
+    fileInput.click();
+}
+
+/* ================= HEARTS ================= */
+function createHeart() {
+    const heart = document.createElement('div');
+    heart.className = 'heart';
+    heart.innerHTML = '❤';
+    heart.style.left = Math.random() * 100 + 'vw';
+    heart.style.animationDuration = (6 + Math.random() * 6) + 's';
+    document.body.appendChild(heart);
+    setTimeout(() => heart.remove(), 12000);
+}
+setInterval(createHeart, 700);
+</script>
+
+</body>
+</html>
